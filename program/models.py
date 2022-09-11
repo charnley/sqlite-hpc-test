@@ -28,6 +28,7 @@ Base = declarative_base(metadata=metadata)
 from sqlalchemy.engine import Engine
 from sqlalchemy import event
 
+
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(connection, _):
     cursor = connection.cursor()
@@ -35,14 +36,21 @@ def set_sqlite_pragma(connection, _):
     cursor.close()
 
 
-def get_session(filename: Path):
- 
+def get_session(filename: Path, init: bool = False):
+
     path = f"sqlite:///{filename}"
 
-    engine = create_engine(path, connect_args={"check_same_thread": False})
-    event.listen(engine, 'connect', set_sqlite_pragma)
+    connect_args = dict(
+        timeout=30,
+        check_same_thread=False,
+    )
 
-    Base.metadata.create_all(engine)  # if database does not exist
+    engine = create_engine(path, connect_args=connect_args)
+    event.listen(engine, "connect", set_sqlite_pragma)
+
+    if init:
+        Base.metadata.create_all(engine)  # if database does not exist
+
     Session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
     session = Session()

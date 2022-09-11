@@ -28,7 +28,7 @@ def main(args=None):
     logger.info(f"Found {len(records)} entries in database")
 
 
-    for i in range(args.number_of_jobs):
+    for _ in range(args.number_of_jobs):
 
         results = work.generate_prediction()
 
