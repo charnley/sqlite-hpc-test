@@ -1,13 +1,12 @@
-name: regiosqm-app
+name: app
 channels:
   - conda-forge
   - defaults
 dependencies:
   - python=3.9
+  - psycopg2
   - flask
   - numpy
-  - boost-cpp=1.74.0=h359cf19_5 # rdkit bug https://github.com/rdkit/rdkit/issues/4987
-  - rdkit
   - rmsd
   - scipy
   - tqdm
@@ -25,3 +24,7 @@ dependencies:
   - jupytext
   - matplotlib
   - nglview
+  # pip
+  - pip
+  - pip:
+    - psycopg2-binary
