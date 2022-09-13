@@ -1,11 +1,11 @@
-
-
+import logging
 from pathlib import Path
 from typing import Optional
+
 import pandas as pd
-import logging
 
 logger = logging.getLogger(__name__)
+
 
 def read_inputfile(filename: Path) -> Optional[pd.DataFrame]:
 
@@ -31,9 +31,6 @@ def read_inputfile(filename: Path) -> Optional[pd.DataFrame]:
 
 def write_csv(filename: Path, df: pd.DataFrame):
 
-    kwargs = dict(
-        header=True,
-        index=False,
-    )
+    kwargs = dict(header=True, index=False,)
 
     df.to_csv(filename, **kwargs)

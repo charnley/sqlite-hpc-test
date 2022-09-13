@@ -3,6 +3,7 @@ Generate a task array on cluster to push everything into sqlite
 """
 import itertools
 import logging
+import os
 import tempfile
 from pathlib import Path
 
@@ -56,6 +57,12 @@ def main(args=None):
         default=Path("./database.sqlite"),
     )
     parser.add_argument(
+        "--postgres",
+        action="store",
+        help="Hostname of postgres instance",
+        metavar="HOSTNAME",
+    )
+    parser.add_argument(
         "--n-entries", action="store", help="", metavar="INT", type=int, default=1
     )
     parser.add_argument(
@@ -69,7 +76,16 @@ def main(args=None):
     assert args.scr.is_dir(), f"{args.scr} does not exist"
 
     # Create session, init file if not exist
-    _ = models.get_session(args.sqlite, init=True)
+    if args.postgres:
+        logger.info(f"Trying to connect to {args.postgres}")
+        _ = models.get_session_pg(
+            hostname=args.postgres,
+            username=os.environ.get("USER"),
+            database_name="postgres",
+            init=True,
+        )
+    else:
+        _ = models.get_session(args.sqlite, init=True)
 
     # Generate work
     filename = "__work__.{n}.csv"
@@ -85,14 +101,18 @@ def main(args=None):
         filename=filename.format(n=uge.UGE_TASK_ID), sqlite=args.sqlite.resolve(),
     )
 
+    if args.postgres:
+        worker_options["postgres"] = args.postgres
+
     # Hack
-    environ = dict(
-        PYTHONPATH=Path(".").resolve()
-    )
+    environ = dict(PYTHONPATH=Path(".").resolve())
 
     worker_args = uge.get_argument_string(worker_options)
     script = uge.generate_script(
-        cmd=f"{CMD_WORKER} {worker_args}", cwd=args.scr.resolve(), environ=environ,task_stop=args.n_jobs,
+        cmd=f"{CMD_WORKER} {worker_args}",
+        cwd=args.scr.resolve(),
+        environ=environ,
+        task_stop=args.n_jobs,
     )
 
     # Submitting and waiting for uge work
@@ -101,5 +121,6 @@ def main(args=None):
 
 if __name__ == "__main__":
     import sys
+
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     main()

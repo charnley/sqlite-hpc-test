@@ -430,7 +430,7 @@ def distribute_work(
     scripts: List[str],
     scr: Path,
     wait: bool = False,
-    wait_time = 60,
+    wait_time=60,
     cmd=UGE_COMMAND_SUBMIT,
     logdir=DEFAULT_LOGS_PATH,
 ):

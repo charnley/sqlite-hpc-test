@@ -1,15 +1,16 @@
 import gzip
 import io
+import os
+import sys
 from pathlib import Path
 
 import numpy as np
 import sqlalchemy as sa
-from sqlalchemy import Column, DateTime, Integer, LargeBinary, String
+from sqlalchemy import (Column, DateTime, Integer, LargeBinary, String,
+                        create_engine)
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.schema import MetaData
-
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.schema import MetaData
 
 # Recommended naming convention used by Alembic, as various different database
 # providers will autogenerate vastly different names making migrations more
@@ -25,25 +26,54 @@ NAMING_CONVENTION = {
 metadata = MetaData(naming_convention=NAMING_CONVENTION)
 Base = declarative_base(metadata=metadata)
 
-from sqlalchemy.engine import Engine
 from sqlalchemy import event
+from sqlalchemy.engine import Engine
+
+# @event.listens_for(Engine, "connect")
+# def set_sqlite_pragma(connection, _):
+#     cursor = connection.cursor()
+#     cursor.execute("PRAGMA journal_mode=WAL")
+#     cursor.close()
 
 
-@event.listens_for(Engine, "connect")
-def set_sqlite_pragma(connection, _):
-    cursor = connection.cursor()
-    cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.close()
+def get_session_pg(
+    username=os.environ.get("PG_USER"),
+    password=os.environ.get("PG_PASSWORD"),
+    hostname=os.environ.get("PG_HOSTNAME"),
+    database_name=os.environ.get("PG_DATABASE"),
+    port=5432,
+    init: bool = False,
+):
+
+    engine = create_engine(
+        f"postgresql://{username}:{password}@{hostname}:{port}/{database_name}",
+        max_overflow=0,
+        pool_pre_ping=True,
+        pool_recycle=60,
+        pool_size=20,
+        connect_args=dict(
+            keepalives=1,
+            keepalives_count=5,
+            keepalives_idle=30,
+            keepalives_interval=10,
+        ),
+    )
+
+    if init:
+        Base.metadata.create_all(engine)  # if database does not exist
+
+    Session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    session = Session()
+
+    return session
 
 
 def get_session(filename: Path, init: bool = False):
 
     path = f"sqlite:///{filename}"
 
-    connect_args = dict(
-        timeout=30,
-        check_same_thread=False,
-    )
+    connect_args = dict(timeout=30, check_same_thread=False,)
 
     engine = create_engine(path, connect_args=connect_args)
     event.listen(engine, "connect", set_sqlite_pragma)
@@ -131,3 +161,6 @@ class Prediction(Base):
     name = Column(String)
 
     status = Column(String)
+
+    def __repr__(self) -> str:
+        return f"<{self.name}>"

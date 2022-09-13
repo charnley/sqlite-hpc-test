@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import os
 import tempfile
 from pathlib import Path
 from time import time
@@ -39,6 +40,12 @@ def main(args=None):
         type=Path,
         default=Path("./database.sqlite"),
     )
+    parser.add_argument(
+        "--postgres",
+        action="store",
+        help="Hostname of postgres instance",
+        metavar="HOSTNAME",
+    )
     args = parser.parse_args(args)
 
     # Read work
@@ -49,7 +56,19 @@ def main(args=None):
     # Connect to database
     database: Path = args.sqlite
     assert database.is_file(), f"Could not read sqlite file: {database}"
-    session = models.get_session(args.sqlite, init=True)
+
+    if args.postgres:
+
+        kwargs = {
+            "username": os.environ.get("USER"),
+            "hostname": args.postgres,
+            "database_name": "postgres",
+        }
+
+        logger.info(f"Trying to connect to {args.postgres}")
+        session = models.get_session_pg(**kwargs)
+    else:
+        session = models.get_session(args.sqlite)
 
     # Init before work
     # and use update?
@@ -70,5 +89,6 @@ def main(args=None):
 
 if __name__ == "__main__":
     import sys
+
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     main()

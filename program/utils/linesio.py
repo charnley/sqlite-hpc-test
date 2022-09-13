@@ -1,4 +1,3 @@
-
 def get_index(lines, pattern, stoppattern=None, maxiter=None):
 
     for i, line in enumerate(lines):
